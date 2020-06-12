@@ -183,7 +183,7 @@ func parseSingleKeywordStatement(tokens []*token, cursor uint, keyword keyword) 
 	cursor++
 	cursor = eatAllToNextNewLine(tokens, cursor)
 
-	return cursor, false
+	return cursor, true
 }
 
 func eatNonKeywords(tokens []*token, cursor uint) uint {
