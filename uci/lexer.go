@@ -102,7 +102,7 @@ func expect(source string, ic cursor, searchString string) bool {
 func stringLexer(source string, ic cursor) (*token, cursor, bool){
 	cur := ic
 	value := ""
-	for cur < cursor(len(source)) && source[cur] != ' ' && source[cur] != '\n' {
+	for cur < cursor(len(source)) && source[cur] != ' ' && source[cur] != '\n' && source[cur] != ';' {
 		value += string(source[cur])
 		cur++
 	}
