@@ -1,6 +1,9 @@
 package uci
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type StatementKind int
 
@@ -39,7 +42,10 @@ type Statement struct {
 	Go        *GoStatement
 }
 
-type SetOptionStatement struct{}
+type SetOptionStatement struct{
+	Name string
+	Value string
+}
 
 type RegisterStatement struct{}
 
@@ -73,6 +79,9 @@ func Parse(source string) ([]*Statement, error) {
 			statements = append(statements, &Statement{
 				Kind: uciStatement,
 			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
 		}
 
 		// debug statement
@@ -86,6 +95,9 @@ func Parse(source string) ([]*Statement, error) {
 				Kind:  debugStatement,
 				Debug: debugStmnt,
 			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
 		}
 
 		//isReady statement
@@ -95,6 +107,25 @@ func Parse(source string) ([]*Statement, error) {
 			statements = append(statements, &Statement{
 				Kind: isReadyStatement,
 			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
+		}
+
+		// setOption statement
+		setOptionStmnt, newCursor, ok, err := parseSetOptionStatement(tokens, cursor)
+		if err != nil {
+			return statements, fmt.Errorf("error parsing setOption: %s", err)
+		}
+		if ok {
+			cursor = newCursor
+			statements = append(statements, &Statement{
+				Kind: setOptionStatement,
+				SetOption: setOptionStmnt,
+			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
 		}
 
 		// newGame Statement
@@ -104,6 +135,9 @@ func Parse(source string) ([]*Statement, error) {
 			statements = append(statements, &Statement{
 				Kind: uciNewGameStatement,
 			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
 		}
 
 		// stop Statement
@@ -113,6 +147,9 @@ func Parse(source string) ([]*Statement, error) {
 			statements = append(statements, &Statement{
 				Kind: stopStatement,
 			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
 		}
 
 		// ponderHit Statement
@@ -122,6 +159,9 @@ func Parse(source string) ([]*Statement, error) {
 			statements = append(statements, &Statement{
 				Kind: ponderHitStatement,
 			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
 		}
 
 		// quit Statement
@@ -131,10 +171,50 @@ func Parse(source string) ([]*Statement, error) {
 			statements = append(statements, &Statement{
 				Kind: quitStatement,
 			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
 		}
 	}
 
 	return statements, nil
+}
+
+func parseSetOptionStatement(tokens []*token, cursor uint) (*SetOptionStatement, uint, bool, error) {
+	if !tokens[cursor].equals(tokenFromKeyword(setoption)) {
+		return nil, cursor, false, nil
+	}
+
+	cursor++
+	// @todo: name and value keywords must not be case sensitive. This should probably be done in the lexer, though
+	if !tokens[cursor].equals(tokenFromKeyword(name)) {
+		return nil, cursor, false, fmt.Errorf("expected name after setOption")
+	}
+
+	stmnt := &SetOptionStatement{}
+
+	cursor++
+	var nameParts []string
+	for !tokens[cursor].equals(tokenFromKeyword(value)) && !tokens[cursor].equals(tokenFromSymbol(newLine)) {
+		nameParts = append(nameParts, tokens[cursor].value)
+		cursor++
+	}
+	stmnt.Name = strings.Join(nameParts, " ")
+
+	if !tokens[cursor].equals(tokenFromKeyword(value)) {
+		cursor++
+		return stmnt, cursor, true, nil
+	}
+	cursor++
+	var valueParts []string
+	for !tokens[cursor].equals(tokenFromSymbol(newLine)) {
+		valueParts = append(valueParts, tokens[cursor].value)
+		cursor++
+	}
+	stmnt.Value = strings.Join(valueParts, " ")
+	cursor++
+
+	return stmnt, cursor, true, nil
 }
 
 func parseDebugStatement(tokens []*token, cursor uint) (*DebugStatement, uint, bool, error) {
@@ -172,7 +252,7 @@ func eatAllToNextNewLine(tokens []*token, cursor uint) uint {
 		cursor++
 	}
 
-	return cursor
+	return cursor + 1
 }
 
 func parseSingleKeywordStatement(tokens []*token, cursor uint, keyword keyword) (uint, bool) {

@@ -48,6 +48,31 @@ func TestKeywords(t *testing.T) {
 	}
 }
 
+func TestCaseInsensitiveKeywords(t *testing.T) {
+	cases := []string{"name NAME NamE", "value VALUE VaLuE"}
+	expectedKeywords := []keyword{name, value}
+
+	for i, caseToTest := range cases {
+		actualList, err := Lex(caseToTest)
+		if err != nil {
+			t.Fatal("error lexing input:", err)
+		}
+
+		if len(actualList) != 3 {
+			t.Fatal("expected 3 keywords, but got", len(actualList))
+		}
+
+		for _, kwrd := range actualList {
+			if kwrd.kind != keywordKind {
+				t.Error("expected keyword, but got", kwrd.kind)
+			}
+			if kwrd.value != string(expectedKeywords[i]) {
+				t.Errorf("expected %s, but got %s", string(expectedKeywords[i]), kwrd.value)
+			}
+		}
+	}
+}
+
 func TestIgnoreSpace(t *testing.T) {
 	actual, _ := Lex("go          e8f8 e8f8")
 
@@ -57,19 +82,14 @@ func TestIgnoreSpace(t *testing.T) {
 }
 
 func TestSymbols(t *testing.T) {
-	actualList, _ := Lex("go;e8f8\n")
+	actualList, _ := Lex("go e8f8\n")
 
-	if len(actualList) != 4 {
-		t.Error("Expected 4 tokens, but got", len(actualList))
-	}
-
-	expectedSemicolon := &token{symbolKind, ";"}
-	if !actualList[1].equals(expectedSemicolon) {
-		t.Errorf("Expected %v, but got %v", expectedSemicolon, actualList[1])
+	if len(actualList) != 3 {
+		t.Error("Expected 3 tokens, but got", len(actualList))
 	}
 
 	expectedNewLine := &token{symbolKind, "\n"}
-	if !actualList[3].equals(expectedNewLine) {
+	if !actualList[2].equals(expectedNewLine) {
 		t.Errorf("Expected %v, but got %v", expectedNewLine, actualList[3])
 	}
 }
@@ -77,11 +97,11 @@ func TestSymbols(t *testing.T) {
 func TestStrings(t *testing.T) {
 	actualList, _ := Lex("string1 c:\\path\\string2;string3")
 
-	if len(actualList) != 4 {
-		t.Error("Expected 4 tokens, but got", len(actualList))
+	if len(actualList) != 2 {
+		t.Error("Expected 2 tokens, but got", len(actualList))
 	}
 
-	for _, i := range []int{0,1,3} {
+	for _, i := range []int{0,1} {
 		if actualList[i].kind != stringKind {
 			t.Errorf("Expected %v to have kind %d, but got %d", actualList[i], stringKind, actualList[i].kind)
 		}
@@ -90,14 +110,8 @@ func TestStrings(t *testing.T) {
 	if actualList[0].value != "string1" {
 		t.Error("Expected value string1, but got", actualList[0].value)
 	}
-	if actualList[0].value != "string1" {
-		t.Error("Expected value string1, but got", actualList[0].value)
-	}
-	if actualList[1].value != "c:\\path\\string2" {
+	if actualList[1].value != "c:\\path\\string2;string3" {
 		t.Error("Expected value c:\\path\\string2, but got", actualList[1].value)
-	}
-	if actualList[3].value != "string3" {
-		t.Error("Expected value string3, but got", actualList[3].value)
 	}
 }
 

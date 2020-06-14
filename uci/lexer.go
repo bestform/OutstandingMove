@@ -47,7 +47,6 @@ type symbol byte
 
 const (
 	newLine symbol = '\n'
-	semicolon symbol = ';'
 )
 
 type tokenKind uint
@@ -102,7 +101,7 @@ func expect(source string, ic cursor, searchString string) bool {
 func stringLexer(source string, ic cursor) (*token, cursor, bool){
 	cur := ic
 	value := ""
-	for cur < cursor(len(source)) && source[cur] != ' ' && source[cur] != '\n' && source[cur] != ';' {
+	for cur < cursor(len(source)) && source[cur] != ' ' && source[cur] != uint8(newLine) {
 		value += string(source[cur])
 		cur++
 	}
@@ -185,7 +184,7 @@ func symbolLexer(source string, ic cursor) (*token, cursor, bool) {
 
 	current := source[ic]
 
-	for _, sym := range []symbol{newLine, semicolon} {
+	for _, sym := range []symbol{newLine} {
 		if current == byte(sym) {
 			return &token{
 				kind:  symbolKind,
@@ -197,8 +196,10 @@ func symbolLexer(source string, ic cursor) (*token, cursor, bool) {
 	return nil, ic, false
 }
 
-func keywordLexer(source string, ic cursor) (*token, cursor, bool) {
+func keywordLexer(incSource string, ic cursor) (*token, cursor, bool) {
 	cur := ic
+
+	source := strings.ToLower(incSource)
 
 	keywords := []keyword{value, binc, btime, code, debug, depth, fen, go_, infinite, isready, later, mate, moves, movestogo, movetime, name, nodes, off, on, ponder, ponderhit, position, quit, register, searchmoves, setoption, startpos, stop, uci, ucinewgame, winc, wtime}
 
