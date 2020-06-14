@@ -36,7 +36,7 @@ func TestSetOption(t *testing.T) {
 
 		stmt := statements[0]
 
-		if stmt.Kind != setOptionStatement {
+		if stmt.Kind != SetOptionStatementKind {
 			t.Fatal("expected setOptionStatement, but got", stmt.Kind)
 		}
 

@@ -8,29 +8,29 @@ import (
 type StatementKind int
 
 const (
-	uciStatement StatementKind = iota
-	debugStatement
-	isReadyStatement
-	setOptionStatement
-	registerStatement
-	uciNewGameStatement
-	positionStatement
-	goStatement
-	go_searchMovesStatement
-	go_ponderStatement
-	go_wtimeStatement
-	go_btimeStatement
-	go_wincStatement
-	go_bincStatement
-	go_movesToGoStatement
-	go_depthStatement
-	go_nodesStatement
-	go_mateStatement
-	go_moveTimeStatement
-	go_inifiniteStatement
-	stopStatement
-	ponderHitStatement
-	quitStatement
+	UciStatementKind StatementKind = iota
+	DebugStatementKind
+	IsReadyStatementKind
+	SetOptionStatementKind
+	RegisterStatementKind
+	UciNewGameStatementKind
+	PositionStatementKind
+	GoStatementKind
+	Go_searchMovesStatementKind
+	Go_ponderStatementKind
+	Go_wtimeStatementKind
+	Go_btimeStatementKind
+	Go_wincStatementKind
+	Go_bincStatementKind
+	Go_movesToGoStatementKind
+	Go_depthStatementKind
+	Go_nodesStatementKind
+	Go_mateStatementKind
+	Go_moveTimeStatementKind
+	Go_inifiniteStatementKind
+	StopStatementKind
+	PonderHitStatementKind
+	QuitStatementKind
 )
 
 type Statement struct {
@@ -77,7 +77,7 @@ func Parse(source string) ([]*Statement, error) {
 		if ok {
 			cursor = newCursor
 			statements = append(statements, &Statement{
-				Kind: uciStatement,
+				Kind: UciStatementKind,
 			})
 			if newCursor == uint(len(tokens)) {
 				break
@@ -92,7 +92,7 @@ func Parse(source string) ([]*Statement, error) {
 		if ok {
 			cursor = newCursor
 			statements = append(statements, &Statement{
-				Kind:  debugStatement,
+				Kind:  DebugStatementKind,
 				Debug: debugStmnt,
 			})
 			if newCursor == uint(len(tokens)) {
@@ -105,7 +105,7 @@ func Parse(source string) ([]*Statement, error) {
 		if ok {
 			cursor = newCursor
 			statements = append(statements, &Statement{
-				Kind: isReadyStatement,
+				Kind: IsReadyStatementKind,
 			})
 			if newCursor == uint(len(tokens)) {
 				break
@@ -120,7 +120,7 @@ func Parse(source string) ([]*Statement, error) {
 		if ok {
 			cursor = newCursor
 			statements = append(statements, &Statement{
-				Kind: setOptionStatement,
+				Kind:      SetOptionStatementKind,
 				SetOption: setOptionStmnt,
 			})
 			if newCursor == uint(len(tokens)) {
@@ -133,7 +133,7 @@ func Parse(source string) ([]*Statement, error) {
 		if ok {
 			cursor = newCursor
 			statements = append(statements, &Statement{
-				Kind: uciNewGameStatement,
+				Kind: UciNewGameStatementKind,
 			})
 			if newCursor == uint(len(tokens)) {
 				break
@@ -145,7 +145,7 @@ func Parse(source string) ([]*Statement, error) {
 		if ok {
 			cursor = newCursor
 			statements = append(statements, &Statement{
-				Kind: stopStatement,
+				Kind: StopStatementKind,
 			})
 			if newCursor == uint(len(tokens)) {
 				break
@@ -157,7 +157,7 @@ func Parse(source string) ([]*Statement, error) {
 		if ok {
 			cursor = newCursor
 			statements = append(statements, &Statement{
-				Kind: ponderHitStatement,
+				Kind: PonderHitStatementKind,
 			})
 			if newCursor == uint(len(tokens)) {
 				break
@@ -169,7 +169,7 @@ func Parse(source string) ([]*Statement, error) {
 		if ok {
 			cursor = newCursor
 			statements = append(statements, &Statement{
-				Kind: quitStatement,
+				Kind: QuitStatementKind,
 			})
 			if newCursor == uint(len(tokens)) {
 				break
@@ -186,7 +186,6 @@ func parseSetOptionStatement(tokens []*token, cursor uint) (*SetOptionStatement,
 	}
 
 	cursor++
-	// @todo: name and value keywords must not be case sensitive. This should probably be done in the lexer, though
 	if !tokens[cursor].equals(tokenFromKeyword(name)) {
 		return nil, cursor, false, fmt.Errorf("expected name after setOption")
 	}
