@@ -2,6 +2,7 @@ package uci
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -16,21 +17,26 @@ const (
 	UciNewGameStatementKind
 	PositionStatementKind
 	GoStatementKind
-	Go_searchMovesStatementKind
-	Go_ponderStatementKind
-	Go_wtimeStatementKind
-	Go_btimeStatementKind
-	Go_wincStatementKind
-	Go_bincStatementKind
-	Go_movesToGoStatementKind
-	Go_depthStatementKind
-	Go_nodesStatementKind
-	Go_mateStatementKind
-	Go_moveTimeStatementKind
-	Go_inifiniteStatementKind
 	StopStatementKind
 	PonderHitStatementKind
 	QuitStatementKind
+)
+
+type GoKind int
+
+const (
+	Go_searchMovesKind GoKind = iota
+	Go_ponderKind
+	Go_wtimeKind
+	Go_btimeKind
+	Go_wincKind
+	Go_bincKind
+	Go_movesToGoKind
+	Go_depthKind
+	Go_nodesKind
+	Go_mateKind
+	Go_moveTimeKind
+	Go_inifiniteKind
 )
 
 type Statement struct {
@@ -42,18 +48,39 @@ type Statement struct {
 	Go        *GoStatement
 }
 
-type SetOptionStatement struct{
-	Name string
+type SetOptionStatement struct {
+	Name  string
 	Value string
 }
 
-type RegisterStatement struct{}
+type RegisterStatement struct {
+	IsLater bool
+	Name    string
+	Code    string
+}
 
-type PositionStatement struct{}
+type PositionStatement struct {
+	IsFen      bool
+	IsStartPos bool
+	FenString  string
+	Moves      []string
+}
 
-type GoStatement struct{}
+type GoStatement struct {
+	Kind        GoKind
+	SearchMoves []string
+	Wtime       int
+	Btime       int
+	Winc        int
+	Binc        int
+	MovesToGo   int
+	Depth       int
+	Nodes       int
+	Mate        int
+	MoveTime    int
+}
 
-type DebugStatement struct{
+type DebugStatement struct {
 	On bool
 }
 
@@ -128,6 +155,45 @@ func Parse(source string) ([]*Statement, error) {
 			}
 		}
 
+		// position statement
+		positionStmnt, newCursor, ok, err := parsePositionStatement(tokens, cursor)
+		if ok {
+			cursor = newCursor
+			statements = append(statements, &Statement{
+				Kind:     PositionStatementKind,
+				Position: positionStmnt,
+			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
+		}
+
+		// go statement
+		goStmnt, newCursor, ok, err := parseGoStatement(tokens, cursor)
+		if ok {
+			cursor = newCursor
+			statements = append(statements, &Statement{
+				Kind: GoStatementKind,
+				Go:   goStmnt,
+			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
+		}
+
+		// register statement
+		registerStmnt, newCursor, ok, err := parseRegisterStatement(tokens, cursor)
+		if ok {
+			cursor = newCursor
+			statements = append(statements, &Statement{
+				Kind:     RegisterStatementKind,
+				Register: registerStmnt,
+			})
+			if newCursor == uint(len(tokens)) {
+				break
+			}
+		}
+
 		// newGame Statement
 		newCursor, ok = parseSingleKeywordStatement(tokens, cursor, ucinewgame)
 		if ok {
@@ -178,6 +244,195 @@ func Parse(source string) ([]*Statement, error) {
 	}
 
 	return statements, nil
+}
+
+func parseRegisterStatement(tokens []*token, ic uint) (*RegisterStatement, uint, bool, error) {
+	if !tokens[ic].equals(tokenFromKeyword(go_)) {
+		return nil, ic, false, nil
+	}
+	cursor := ic
+
+	stmnt := &RegisterStatement{}
+	cursor++
+
+	if tokens[cursor].equals(tokenFromKeyword(later)) {
+		stmnt.IsLater = true
+		cursor = eatAllToNextNewLine(tokens, cursor)
+		return stmnt, cursor, true, nil
+	}
+
+	for !tokens[cursor].equals(tokenFromSymbol(newLine)) && cursor < uint(len(tokens)) {
+		if tokens[cursor].equals(tokenFromKeyword(name)) {
+			var name []string
+			for !tokens[cursor].equals(tokenFromKeyword(code)) && !tokens[cursor].equals(tokenFromSymbol(newLine)) && cursor < uint(len(tokens)) {
+				name = append(name, tokens[cursor].value)
+				cursor++
+			}
+			stmnt.Name = strings.Join(name, " ")
+		}
+		if tokens[cursor].equals(tokenFromKeyword(code)) {
+			var code []string
+			for !tokens[cursor].equals(tokenFromKeyword(name)) && !tokens[cursor].equals(tokenFromSymbol(newLine)) && cursor < uint(len(tokens)) {
+				code = append(code, tokens[cursor].value)
+				cursor++
+			}
+			stmnt.Code = strings.Join(code, " ")
+		}
+	}
+
+	return stmnt, cursor, true, nil
+}
+
+func parseGoStatement(tokens []*token, ic uint) (*GoStatement, uint, bool, error) {
+	if !tokens[ic].equals(tokenFromKeyword(go_)) {
+		return nil, ic, false, nil
+	}
+	cursor := ic
+
+	stmnt := &GoStatement{}
+
+	parseIntGoStatement := func(kind GoKind, stmnt *GoStatement, ic uint) (int, uint, error) {
+		stmnt.Kind = kind
+		cursor := ic
+		cursor++
+		number, err := strconv.Atoi(tokens[cursor].value)
+		if err != nil {
+			return 0, ic, fmt.Errorf("expected number: %s", err)
+		}
+		cursor = eatAllToNextNewLine(tokens, cursor)
+		return number, cursor, nil
+	}
+
+	var err error
+	var number int
+
+	switch tokens[cursor].value {
+	case string(searchmoves):
+		stmnt.Kind = Go_searchMovesKind
+		var moves []string
+		for !tokens[cursor].equals(tokenFromSymbol(newLine)) && cursor < uint(len(tokens)) {
+			if tokens[cursor].kind != longAlgebraicNotation {
+				return nil, ic, false, fmt.Errorf("expected long algebraic notation string for moves, but found %s", tokens[cursor].value)
+			}
+			moves = append(moves, tokens[cursor].value)
+			cursor++
+		}
+		stmnt.SearchMoves = moves
+		cursor++
+		return stmnt, cursor, true, nil
+	case string(ponder):
+		stmnt.Kind = Go_ponderKind
+		cursor = eatAllToNextNewLine(tokens, cursor)
+		return stmnt, cursor, true, nil
+	case string(infinite):
+		stmnt.Kind = Go_inifiniteKind
+		cursor = eatAllToNextNewLine(tokens, cursor)
+		return stmnt, cursor, true, nil
+	case string(wtime):
+		number, cursor, err = parseIntGoStatement(Go_wtimeKind, stmnt, cursor)
+		if err != nil {
+			return nil, ic, false, err
+		}
+		stmnt.Wtime = number
+		return stmnt, cursor, true, nil
+	case string(btime):
+		number, cursor, err = parseIntGoStatement(Go_btimeKind, stmnt, cursor)
+		if err != nil {
+			return nil, ic, false, err
+		}
+		stmnt.Btime = number
+		return stmnt, cursor, true, nil
+	case string(winc):
+		number, cursor, err = parseIntGoStatement(Go_wincKind, stmnt, cursor)
+		if err != nil {
+			return nil, ic, false, err
+		}
+		stmnt.Winc = number
+		return stmnt, cursor, true, nil
+	case string(binc):
+		number, cursor, err = parseIntGoStatement(Go_bincKind, stmnt, cursor)
+		if err != nil {
+			return nil, ic, false, err
+		}
+		stmnt.Binc = number
+		return stmnt, cursor, true, nil
+	case string(movestogo):
+		number, cursor, err = parseIntGoStatement(Go_movesToGoKind, stmnt, cursor)
+		if err != nil {
+			return nil, ic, false, err
+		}
+		stmnt.MovesToGo = number
+		return stmnt, cursor, true, nil
+	case string(depth):
+		number, cursor, err = parseIntGoStatement(Go_depthKind, stmnt, cursor)
+		if err != nil {
+			return nil, ic, false, err
+		}
+		stmnt.Depth = number
+		return stmnt, cursor, true, nil
+	case string(nodes):
+		number, cursor, err = parseIntGoStatement(Go_nodesKind, stmnt, cursor)
+		if err != nil {
+			return nil, ic, false, err
+		}
+		stmnt.Nodes = number
+		return stmnt, cursor, true, nil
+	case string(mate):
+		number, cursor, err = parseIntGoStatement(Go_mateKind, stmnt, cursor)
+		if err != nil {
+			return nil, ic, false, err
+		}
+		stmnt.Mate = number
+		return stmnt, cursor, true, nil
+	case string(movetime):
+		number, cursor, err = parseIntGoStatement(Go_moveTimeKind, stmnt, cursor)
+		if err != nil {
+			return nil, ic, false, err
+		}
+		stmnt.MoveTime = number
+		return stmnt, cursor, true, nil
+	}
+
+	return nil, ic, false, fmt.Errorf("not recognized go command: %s", tokens[cursor].value)
+}
+
+func parsePositionStatement(tokens []*token, ic uint) (*PositionStatement, uint, bool, error) {
+	if !tokens[ic].equals(tokenFromKeyword(position)) {
+		return nil, ic, false, nil
+	}
+	cursor := ic
+	cursor++
+	stmnt := &PositionStatement{}
+	if tokens[cursor].equals(tokenFromKeyword(fen)) {
+		stmnt.IsFen = true
+		cursor++
+		stmnt.FenString = tokens[cursor].value
+		cursor++
+	}
+	if tokens[cursor].equals(tokenFromKeyword(startpos)) {
+		stmnt.IsStartPos = true
+		if stmnt.IsFen {
+			return nil, ic, false, fmt.Errorf("a position statement cannot have a fen string and a startpos flag")
+		}
+		cursor++
+	}
+
+	if !tokens[cursor].equals(tokenFromKeyword(moves)) {
+		return nil, ic, false, fmt.Errorf("expected 'moves' in position statement")
+	}
+	cursor++
+	var moves []string
+	for !tokens[cursor].equals(tokenFromSymbol(newLine)) && cursor < uint(len(tokens)) {
+		if tokens[cursor].kind != longAlgebraicNotation {
+			return nil, ic, false, fmt.Errorf("expected long algebraic notation string for moves, but found %s", tokens[cursor].value)
+		}
+		moves = append(moves, tokens[cursor].value)
+		cursor++
+	}
+	stmnt.Moves = moves
+	cursor++
+
+	return stmnt, cursor, true, nil
 }
 
 func parseSetOptionStatement(tokens []*token, cursor uint) (*SetOptionStatement, uint, bool, error) {
