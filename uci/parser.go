@@ -67,7 +67,7 @@ type PositionStatement struct {
 }
 
 type GoStatement struct {
-	Kind        GoKind
+	Kinds       []GoKind
 	SearchMoves []string
 	Wtime       int
 	Btime       int
@@ -289,111 +289,115 @@ func parseGoStatement(tokens []*token, ic uint) (*GoStatement, uint, bool, error
 	}
 	cursor := ic
 
-	stmnt := &GoStatement{}
+	stmnt := &GoStatement{
+		Kinds: make([]GoKind, 0),
+	}
 
 	parseIntGoStatement := func(kind GoKind, stmnt *GoStatement, ic uint) (int, uint, error) {
-		stmnt.Kind = kind
+		stmnt.Kinds = append(stmnt.Kinds, kind)
 		cursor := ic
 		cursor++
 		number, err := strconv.Atoi(tokens[cursor].value)
 		if err != nil {
 			return 0, ic, fmt.Errorf("expected number: %s", err)
 		}
-		cursor = eatAllToNextNewLine(tokens, cursor)
+		cursor++
 		return number, cursor, nil
 	}
 
 	var err error
 	var number int
 
-	switch tokens[cursor].value {
-	case string(searchmoves):
-		stmnt.Kind = Go_searchMovesKind
-		var moves []string
-		for !tokens[cursor].equals(tokenFromSymbol(newLine)) && cursor < uint(len(tokens)) {
-			if tokens[cursor].kind != longAlgebraicNotation {
-				return nil, ic, false, fmt.Errorf("expected long algebraic notation string for moves, but found %s", tokens[cursor].value)
-			}
-			moves = append(moves, tokens[cursor].value)
-			cursor++
-		}
-		stmnt.SearchMoves = moves
-		cursor++
-		return stmnt, cursor, true, nil
-	case string(ponder):
-		stmnt.Kind = Go_ponderKind
-		cursor = eatAllToNextNewLine(tokens, cursor)
-		return stmnt, cursor, true, nil
-	case string(infinite):
-		stmnt.Kind = Go_inifiniteKind
-		cursor = eatAllToNextNewLine(tokens, cursor)
-		return stmnt, cursor, true, nil
-	case string(wtime):
-		number, cursor, err = parseIntGoStatement(Go_wtimeKind, stmnt, cursor)
-		if err != nil {
-			return nil, ic, false, err
-		}
-		stmnt.Wtime = number
-		return stmnt, cursor, true, nil
-	case string(btime):
-		number, cursor, err = parseIntGoStatement(Go_btimeKind, stmnt, cursor)
-		if err != nil {
-			return nil, ic, false, err
-		}
-		stmnt.Btime = number
-		return stmnt, cursor, true, nil
-	case string(winc):
-		number, cursor, err = parseIntGoStatement(Go_wincKind, stmnt, cursor)
-		if err != nil {
-			return nil, ic, false, err
-		}
-		stmnt.Winc = number
-		return stmnt, cursor, true, nil
-	case string(binc):
-		number, cursor, err = parseIntGoStatement(Go_bincKind, stmnt, cursor)
-		if err != nil {
-			return nil, ic, false, err
-		}
-		stmnt.Binc = number
-		return stmnt, cursor, true, nil
-	case string(movestogo):
-		number, cursor, err = parseIntGoStatement(Go_movesToGoKind, stmnt, cursor)
-		if err != nil {
-			return nil, ic, false, err
-		}
-		stmnt.MovesToGo = number
-		return stmnt, cursor, true, nil
-	case string(depth):
-		number, cursor, err = parseIntGoStatement(Go_depthKind, stmnt, cursor)
-		if err != nil {
-			return nil, ic, false, err
-		}
-		stmnt.Depth = number
-		return stmnt, cursor, true, nil
-	case string(nodes):
-		number, cursor, err = parseIntGoStatement(Go_nodesKind, stmnt, cursor)
-		if err != nil {
-			return nil, ic, false, err
-		}
-		stmnt.Nodes = number
-		return stmnt, cursor, true, nil
-	case string(mate):
-		number, cursor, err = parseIntGoStatement(Go_mateKind, stmnt, cursor)
-		if err != nil {
-			return nil, ic, false, err
-		}
-		stmnt.Mate = number
-		return stmnt, cursor, true, nil
-	case string(movetime):
-		number, cursor, err = parseIntGoStatement(Go_moveTimeKind, stmnt, cursor)
-		if err != nil {
-			return nil, ic, false, err
-		}
-		stmnt.MoveTime = number
-		return stmnt, cursor, true, nil
-	}
+	cursor++
+	for cursor < uint(len(tokens)) && !tokens[cursor].equals(tokenFromSymbol(newLine)) {
 
-	return nil, ic, false, fmt.Errorf("not recognized go command: %s", tokens[cursor].value)
+		switch tokens[cursor].value {
+
+		case string(searchmoves):
+			cursor++
+			stmnt.Kinds = append(stmnt.Kinds, Go_searchMovesKind)
+			var moves []string
+			for tokens[cursor].kind == longAlgebraicNotation {
+				moves = append(moves, tokens[cursor].value)
+				cursor++
+			}
+			stmnt.SearchMoves = moves
+
+		case string(ponder):
+			stmnt.Kinds = append(stmnt.Kinds, Go_ponderKind)
+			cursor++
+
+		case string(infinite):
+			stmnt.Kinds = append(stmnt.Kinds, Go_inifiniteKind)
+			cursor++
+
+		case string(wtime):
+			number, cursor, err = parseIntGoStatement(Go_wtimeKind, stmnt, cursor)
+			if err != nil {
+				return nil, ic, false, err
+			}
+			stmnt.Wtime = number
+
+		case string(btime):
+			number, cursor, err = parseIntGoStatement(Go_btimeKind, stmnt, cursor)
+			if err != nil {
+				return nil, ic, false, err
+			}
+			stmnt.Btime = number
+
+		case string(winc):
+			number, cursor, err = parseIntGoStatement(Go_wincKind, stmnt, cursor)
+			if err != nil {
+				return nil, ic, false, err
+			}
+			stmnt.Winc = number
+
+		case string(binc):
+			number, cursor, err = parseIntGoStatement(Go_bincKind, stmnt, cursor)
+			if err != nil {
+				return nil, ic, false, err
+			}
+			stmnt.Binc = number
+
+		case string(movestogo):
+			number, cursor, err = parseIntGoStatement(Go_movesToGoKind, stmnt, cursor)
+			if err != nil {
+				return nil, ic, false, err
+			}
+			stmnt.MovesToGo = number
+
+		case string(depth):
+			number, cursor, err = parseIntGoStatement(Go_depthKind, stmnt, cursor)
+			if err != nil {
+				return nil, ic, false, err
+			}
+			stmnt.Depth = number
+
+		case string(nodes):
+			number, cursor, err = parseIntGoStatement(Go_nodesKind, stmnt, cursor)
+			if err != nil {
+				return nil, ic, false, err
+			}
+			stmnt.Nodes = number
+
+		case string(mate):
+			number, cursor, err = parseIntGoStatement(Go_mateKind, stmnt, cursor)
+			if err != nil {
+				return nil, ic, false, err
+			}
+			stmnt.Mate = number
+
+		case string(movetime):
+			number, cursor, err = parseIntGoStatement(Go_moveTimeKind, stmnt, cursor)
+			if err != nil {
+				return nil, ic, false, err
+			}
+			stmnt.MoveTime = number
+		}
+	}
+	cursor++
+
+	return stmnt, cursor, true, nil
 }
 
 func parsePositionStatement(tokens []*token, ic uint) (*PositionStatement, uint, bool, error) {

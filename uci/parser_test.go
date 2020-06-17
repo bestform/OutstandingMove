@@ -57,19 +57,30 @@ func TestSetOption(t *testing.T) {
 func TestPosition(t *testing.T) {
 	expectations := []struct {
 		source     string
-		kind GoKind
+		kinds      []GoKind
 		fenString  string
 		isFen      bool
 		isStartPos bool
 		moves      []string
+		wtime	   int
 	}{
 		{
 			source:     "go searchmoves e1f1\n",
-			kind: 		Go_searchMovesKind,
+			kinds: 		[]GoKind{Go_searchMovesKind},
 			fenString:  "0000",
 			isFen:      true,
 			isStartPos: false,
 			moves:      []string{"e1f1"},
+			wtime:		0,
+		},
+		{
+			source:     "go wtime 1 searchmoves e1f1\n",
+			kinds: 		[]GoKind{Go_searchMovesKind, Go_wtimeKind},
+			fenString:  "0000",
+			isFen:      true,
+			isStartPos: false,
+			moves:      []string{"e1f1"},
+			wtime:		1,
 		},
 	}
 
@@ -85,9 +96,25 @@ func TestPosition(t *testing.T) {
 		if stmnt.Kind != GoStatementKind {
 			t.Fatal("Expected go kind")
 		}
-		if stmnt.Go.Kind != expectation.kind {
-			t.Fatal("Expected kind", expectation.kind, "but got", stmnt.Go.Kind)
+
+		if len(stmnt.Go.Kinds) != len(expectation.kinds) {
+			t.Fatal("Expected", len(expectation.kinds), "kinds, bot got", len(stmnt.Go.Kinds))
 		}
 
+		for _, actualKind := range stmnt.Go.Kinds {
+			if !inKinds(actualKind, stmnt.Go.Kinds) {
+				t.Fatal("Did not expected kind", actualKind)
+			}
+		}
 	}
+}
+
+func inKinds(kind GoKind, list []GoKind) bool {
+	for _, kindInList := range list {
+		if kind == kindInList {
+			return true
+		}
+	}
+
+	return false
 }
