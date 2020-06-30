@@ -6,20 +6,20 @@ import (
 	"strings"
 )
 
-type StatementKind int
+type StatementKind string
 
 const (
-	UciStatementKind StatementKind = iota
-	DebugStatementKind
-	IsReadyStatementKind
-	SetOptionStatementKind
-	RegisterStatementKind
-	UciNewGameStatementKind
-	PositionStatementKind
-	GoStatementKind
-	StopStatementKind
-	PonderHitStatementKind
-	QuitStatementKind
+	UciStatementKind StatementKind = "uci"
+	DebugStatementKind = "debug"
+	IsReadyStatementKind = "isReady"
+	SetOptionStatementKind = "setOption"
+	RegisterStatementKind = "register"
+	UciNewGameStatementKind = "uciNewGame"
+	PositionStatementKind = "position"
+	GoStatementKind = "go"
+	StopStatementKind = "stop"
+	PonderHitStatementKind = "ponderHit"
+	QuitStatementKind = "quit"
 )
 
 type GoKind int

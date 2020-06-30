@@ -1,13 +1,15 @@
 package chessBot
 
+import "chessBot/board"
+
 type AN struct {
 	File string
 	Rank int
-	Piece ChessPieceKind
+	Piece board.ChessPieceKind
 	IsMove bool
 	IsCapture bool
 	IsPromotion bool
-	PromotesTo ChessPieceKind
+	PromotesTo board.ChessPieceKind
 	IsKingsideCastling bool
 	IsQueensideCastling bool
 }

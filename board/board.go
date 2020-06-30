@@ -61,6 +61,10 @@ func PosFromString(pos string) Position {
 		position.File = E
 	case 'f':
 		position.File = F
+	case 'g':
+		position.File = G
+	case 'h':
+		position.File = H
 	}
 
 	// same here. We really shouldn't ignore the error, but in favour of better usability we will let this one slide
@@ -68,6 +72,21 @@ func PosFromString(pos string) Position {
 	position.Rank = rank
 
 	return position
+}
+
+type Move struct {
+	From Position
+	To Position
+}
+
+func MoveFromString(moveStr string) Move {
+	move := Move{}
+	fromString := string(moveStr[0]) + string(moveStr[1])
+	toString := string(moveStr[2]) + string(moveStr[3])
+	move.From = PosFromString(fromString)
+	move.To = PosFromString(toString)
+
+	return move
 }
 
 type Mailbox120 [120]int
@@ -116,6 +135,12 @@ func (b *Board) IsCastlingPossible(c Castling) bool {
 	}
 
 	return false
+}
+
+func (b *Board) Move(move Move) {
+	pieceToMove := b.PieceAt(move.From)
+	b.ClearPieceAt(move.From)
+	b.SetPieceAt(move.To, pieceToMove)
 }
 
 func (b *Board) PieceAt(p Position) *Piece {

@@ -2,53 +2,48 @@ package main
 
 import (
 	"bufio"
+	"chessBot/engine"
 	"chessBot/uci"
 	"fmt"
-	"log"
 	"os"
 )
 
 func main() {
 
-	logfile, err := os.Create("outstandingMove.log")
-	if err != nil {
-		log.Fatal("error opening log file:", err)
-	}
-	logfile.WriteString("Welcome to Outstanding Move! Waiting for commands...\n")
+
+	engine.Log("Welcome to Outstanding Move! Waiting for commands...\n")
 
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
 		text, _ := reader.ReadString('\n')
-		logger(logfile, text)
+		engine.Log(text)
 		stmnts, err := uci.Parse(text)
 		if err != nil {
-			logger(logfile, "Error when parsing input:\n")
-			logger(logfile, err.Error())
+			engine.Log("Error when parsing input:\n")
+			engine.Log(err.Error())
 			continue
 		}
 
 		for _, stmnt := range stmnts {
-			logger(logfile, "Statement: " + fmt.Sprintf("%+v", &stmnt))
+			engine.Log("Statement received: " + string(stmnt.Kind))
 			switch stmnt.Kind {
 			case uci.UciStatementKind:
-				logger(logfile, "received uci statement")
-				fmt.Print("uciok")
+				engine.Send("uciok")
 			case uci.IsReadyStatementKind:
-				logger(logfile, "received isready statement")
-				fmt.Print("readyok")
+				engine.Send("readyok")
 			case uci.UciNewGameStatementKind:
-				logger(logfile, "received ucinewgame statement")
 			case uci.PositionStatementKind:
-				logger(logfile, "received position statement")
-				logger(logfile, fmt.Sprintf("%+v", stmnt.Position))
+				engine.Log(fmt.Sprintf("%+v", stmnt.Position))
+				err = engine.InitBoard(stmnt.Position)
+				if err != nil {
+					engine.Log("error initializing board: " + err.Error())
+				}
+				engine.Log("Current Board:")
+				engine.Log(engine.CurrentBoard.String())
 			}
 		}
 	}
 
 }
 
-func logger(f *os.File, msg string) {
-	f.WriteString(msg + "\n")
-	f.Sync()
-}
