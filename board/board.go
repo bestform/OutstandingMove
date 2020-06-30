@@ -1,5 +1,7 @@
 package board
 
+import "strconv"
+
 type File int
 
 const (
@@ -13,18 +15,77 @@ const (
 	H
 )
 
+type Castling int
+
+const (
+	WHITE_KINGSIDE Castling = iota
+	WHITE_QUEENSIDE
+	BLACK_KINGSIDE
+	BLACK_QUEENSIDE
+)
+
+type Position struct {
+	File File
+	Rank int
+}
+
+func (p *Position) SameAs(p2 *Position) bool {
+	if p == nil && p2 == nil {
+		return true
+	}
+	if p == nil || p2 == nil {
+		return false
+	}
+
+	return p.File == p2.File && p.Rank == p2.Rank
+}
+
+func PosFromString(pos string) Position {
+	position := Position{}
+	if len(pos) != 2 {
+		// we should in theory return an error, but it would make the using code very awkward,
+		// so we see if we can get away with it, knowing that if there is something wrong with
+		// the pos string we get really nasty behaviour.
+		return position
+	}
+	switch pos[0] {
+	case 'a':
+		position.File = A
+	case 'b':
+		position.File = B
+	case 'c':
+		position.File = C
+	case 'd':
+		position.File = D
+	case 'e':
+		position.File = E
+	case 'f':
+		position.File = F
+	}
+
+	// same here. We really shouldn't ignore the error, but in favour of better usability we will let this one slide
+	rank, _ := strconv.Atoi(string(pos[1]))
+	position.Rank = rank
+
+	return position
+}
+
 type Mailbox120 [120]int
 type Cell struct {
 	Occupied bool
 	Occupant *Piece
 }
 type Board struct {
-	Cells []Cell
+	Cells      []Cell
+	Turn       Color
+	Castling   []Castling
+	EnPassant  *Position
+	HalfTurns  int
+	TurnNumber int
 }
 
-
 func NewMailbox120() *Mailbox120 {
-	return &Mailbox120 {
+	return &Mailbox120{
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1,  0,  1,  2,  3,  4,  5,  6,  7, -1,
@@ -42,41 +103,52 @@ func NewMailbox120() *Mailbox120 {
 
 func NewBoard() *Board {
 	return &Board{
-		Cells: make([]Cell, 64),
+		Cells:    make([]Cell, 64),
+		Castling: make([]Castling, 0),
 	}
 }
 
-func (b *Board) CellAt(file File, rank int) *Piece {
-	return b.Cells[positionFromFileAndRank(file, rank)].Occupant
+func (b *Board) IsCastlingPossible(c Castling) bool {
+	for _, possibleCastling := range b.Castling {
+		if possibleCastling == c {
+			return true
+		}
+	}
+
+	return false
 }
 
-func (b *Board) SetCellAt(file File, rank int, piece *Piece) {
-	b.Cells[positionFromFileAndRank(file, rank)].Occupant = piece
-	b.Cells[positionFromFileAndRank(file, rank)].Occupied = true
+func (b *Board) PieceAt(p Position) *Piece {
+	return b.Cells[indexFromFileAndRank(p.File, p.Rank)].Occupant
 }
 
-func (b *Board) ClearCellAt(file File, rank int) {
-	b.Cells[positionFromFileAndRank(file, rank)].Occupant = nil
-	b.Cells[positionFromFileAndRank(file, rank)].Occupied = false
+func (b *Board) SetPieceAt(p Position, piece *Piece) {
+	b.Cells[indexFromFileAndRank(p.File, p.Rank)].Occupant = piece
+	b.Cells[indexFromFileAndRank(p.File, p.Rank)].Occupied = true
 }
 
-func positionFromFileAndRank(file File, rank int) int {
+func (b *Board) ClearPieceAt(p Position) {
+	b.Cells[indexFromFileAndRank(p.File, p.Rank)].Occupant = nil
+	b.Cells[indexFromFileAndRank(p.File, p.Rank)].Occupied = false
+}
+
+func indexFromFileAndRank(file File, rank int) int {
 	column := int(file)
 
-	return (rank - 1) * 8 + column
+	return (rank-1)*8 + column
 }
 
 func position120FromFileAndRank(file File, rank int) int {
 	column := int(file) + 1
 
-	return (rank - 1) * 10 + column + 20
+	return (rank-1)*10 + column + 20
 }
 
 func (b *Board) String() string {
 	str := ""
 	for rank := 8; rank > 0; rank-- {
 		for file := 0; file < 8; file++ {
-			cell := b.CellAt(File(file), rank)
+			cell := b.PieceAt(Position{File: File(file), Rank: rank})
 			if cell == nil {
 				str += "."
 				continue
@@ -102,7 +174,3 @@ func (b *Board) String() string {
 
 	return str
 }
-
-
-
-

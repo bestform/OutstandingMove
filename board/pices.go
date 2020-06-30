@@ -1,5 +1,7 @@
 package board
 
+import "fmt"
+
 type ChessPieceKind int
 type Color int
 
@@ -22,6 +24,14 @@ type Piece struct {
 	Offsets [8]int
 	Slide   bool
 	Color   Color
+}
+
+func (p *Piece) SameAs(p2 *Piece) bool {
+	return p.Color == p2.Color && p.Kind == p2.Kind
+}
+
+func (p *Piece) String() string {
+	return fmt.Sprint(p.Color, p.Kind)
 }
 
 var offsets map[ChessPieceKind][8]int

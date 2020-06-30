@@ -36,7 +36,7 @@ func TestPositionFromFileAndRank(t *testing.T) {
 	}
 
 	for _, tst := range tests {
-		actual := positionFromFileAndRank(tst.file, tst.rank)
+		actual := indexFromFileAndRank(tst.file, tst.rank)
 		if actual != tst.expectation {
 			t.Errorf("expected %d from %s, but got %d", tst.expectation, tst.desc, actual)
 		}
