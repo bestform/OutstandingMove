@@ -114,9 +114,9 @@ func addCastling(newBoard *board.Board, castlingPart string) error {
 func addTurn(newBoard *board.Board, turnPart string) error {
 	switch turnPart {
 	case "w":
-		newBoard.Turn = board.WHITE
+		newBoard.Side = board.WHITE
 	case "b":
-		newBoard.Turn = board.BLACK
+		newBoard.Side = board.BLACK
 	default:
 		return errors.New("invalid turn part")
 	}

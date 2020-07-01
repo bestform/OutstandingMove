@@ -114,7 +114,7 @@ func TestTurn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if createdBoard.Turn != board.WHITE {
+	if createdBoard.Side != board.WHITE {
 		t.Error("Expected white's turn")
 	}
 
@@ -123,7 +123,7 @@ func TestTurn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if createdBoard.Turn != board.BLACK {
+	if createdBoard.Side != board.BLACK {
 		t.Error("Expected black's turn")
 	}
 }

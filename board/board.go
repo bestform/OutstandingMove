@@ -1,6 +1,8 @@
 package board
 
-import "strconv"
+import (
+	"strconv"
+)
 
 type File int
 
@@ -15,6 +17,8 @@ const (
 	H
 )
 
+var AllFiles = []File{A, B, C, D, E, F, G, H}
+
 type Castling int
 
 const (
@@ -27,6 +31,31 @@ const (
 type Position struct {
 	File File
 	Rank int
+}
+
+func (p Position) String() string {
+	var out string
+	switch p.File {
+	case A:
+		out += "a"
+	case B:
+		out += "b"
+	case C:
+		out += "c"
+	case D:
+		out += "d"
+	case E:
+		out += "e"
+	case F:
+		out += "f"
+	case G:
+		out += "g"
+	case H:
+		out += "h"
+	}
+	out += strconv.Itoa(p.Rank)
+
+	return out
 }
 
 func (p *Position) SameAs(p2 *Position) bool {
@@ -79,6 +108,15 @@ type Move struct {
 	To Position
 }
 
+func (m Move) String() string {
+	var out string
+	for _, p := range []Position{m.From, m.To} {
+		out += p.String()
+	}
+
+	return out
+}
+
 func MoveFromString(moveStr string) Move {
 	move := Move{}
 	fromString := string(moveStr[0]) + string(moveStr[1])
@@ -90,13 +128,15 @@ func MoveFromString(moveStr string) Move {
 }
 
 type Mailbox120 [120]int
+type Mailbox64 [64]int
+
 type Cell struct {
 	Occupied bool
 	Occupant *Piece
 }
 type Board struct {
 	Cells      []Cell
-	Turn       Color
+	Side       Color
 	Castling   []Castling
 	EnPassant  *Position
 	HalfTurns  int
@@ -120,6 +160,19 @@ func NewMailbox120() *Mailbox120 {
 	}
 }
 
+func NewMailbox64() *Mailbox64 {
+	return &Mailbox64{
+		21, 22, 23, 24, 25, 26, 27, 28,
+		31, 32, 33, 34, 35, 36, 37, 38,
+		41, 42, 43, 44, 45, 46, 47, 48,
+		51, 52, 53, 54, 55, 56, 57, 58,
+		61, 62, 63, 64, 65, 66, 67, 68,
+		71, 72, 73, 74, 75, 76, 77, 78,
+		81, 82, 83, 84, 85, 86, 87, 88,
+		91, 92, 93, 94, 95, 96, 97, 98,
+	}
+}
+
 func NewBoard() *Board {
 	return &Board{
 		Cells:    make([]Cell, 64),
@@ -135,6 +188,14 @@ func (b *Board) IsCastlingPossible(c Castling) bool {
 	}
 
 	return false
+}
+
+func (b *Board) SwitchSide() {
+	if b.Side == WHITE {
+		b.Side = BLACK
+		return
+	}
+	b.Side = WHITE
 }
 
 func (b *Board) Move(move Move) {
@@ -163,10 +224,18 @@ func indexFromFileAndRank(file File, rank int) int {
 	return (rank-1)*8 + column
 }
 
-func position120FromFileAndRank(file File, rank int) int {
+func index120FromFileAndRank(file File, rank int) int {
 	column := int(file) + 1
 
 	return (rank-1)*10 + column + 20
+}
+
+func PositionFromIndex(index int) *Position {
+	p := Position{}
+	p.File = File(index % 8)
+	p.Rank = index / 8 + 1
+
+	return &p
 }
 
 func (b *Board) String() string {

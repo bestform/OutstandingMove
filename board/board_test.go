@@ -43,6 +43,29 @@ func TestPositionFromFileAndRank(t *testing.T) {
 	}
 }
 
+func TestPositionFromIndex(t *testing.T) {
+	for _, testCase := range []struct{pos int; expected Position}{
+		{
+			pos:      0,
+			expected: Position{A, 1},
+		},
+		{
+			pos:      8,
+			expected: Position{A, 2},
+		},
+		{
+			pos:      15,
+			expected: Position{H, 2},
+		},
+
+	} {
+		actual := PositionFromIndex(testCase.pos)
+		if !actual.SameAs(&testCase.expected) {
+			t.Errorf("expected %+v but got %+v", testCase.expected, actual)
+		}
+	}
+}
+
 func TestPosition120FromFileAndRank(t *testing.T) {
 	tests := []struct {
 		desc        string
@@ -77,7 +100,7 @@ func TestPosition120FromFileAndRank(t *testing.T) {
 	}
 
 	for _, tst := range tests {
-		actual := position120FromFileAndRank(tst.file, tst.rank)
+		actual := index120FromFileAndRank(tst.file, tst.rank)
 		if actual != tst.expectation {
 			t.Errorf("expected %d from %s, but got %d", tst.expectation, tst.desc, actual)
 		}

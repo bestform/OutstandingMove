@@ -5,6 +5,7 @@ import (
 	"chessBot/engine"
 	"chessBot/uci"
 	"fmt"
+	"math/rand"
 	"os"
 )
 
@@ -26,7 +27,7 @@ func main() {
 		}
 
 		for _, stmnt := range stmnts {
-			engine.Log("Statement received: " + string(stmnt.Kind))
+			engine.Log("<- " + string(stmnt.Kind))
 			switch stmnt.Kind {
 			case uci.UciStatementKind:
 				engine.Send("uciok")
@@ -41,6 +42,12 @@ func main() {
 				}
 				engine.Log("Current Board:")
 				engine.Log(engine.CurrentBoard.String())
+				engine.CurrentBoard.SwitchSide() // todo: do that on engine level.
+			case uci.GoStatementKind:
+				moves := engine.CalculatePossibleMoves()
+				move := moves[rand.Int() % len(moves)]
+				engine.Send("bestmove " + move.String())
+
 			}
 		}
 	}
