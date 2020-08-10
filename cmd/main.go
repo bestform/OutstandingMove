@@ -44,7 +44,7 @@ func main() {
 				engine.Log(engine.CurrentBoard.String())
 				engine.CurrentBoard.SwitchSide() // todo: do that on engine level.
 			case uci.GoStatementKind:
-				moves := engine.CalculatePossibleMoves()
+				moves := engine.CalculatePossibleMoves(true)
 				move := moves[rand.Int() % len(moves)]
 				engine.Send("bestmove " + move.String())
 

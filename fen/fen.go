@@ -127,7 +127,8 @@ func addTurn(newBoard *board.Board, turnPart string) error {
 func addPieces(newBoard *board.Board, piecesPart string) error{
 	ranks := strings.Split(piecesPart, "/")
 
-	for oneLessCurrentRank, row := range ranks {
+	for i, row := range ranks {
+		rank := 8 - i
 		var file int32
 		for _, c := range row {
 			if file > 7 {
@@ -146,9 +147,9 @@ func addPieces(newBoard *board.Board, piecesPart string) error{
 			isLower := string(c) == strings.ToLower(string(c))
 			var color board.Color
 			if isLower {
-				color = board.WHITE
-			} else {
 				color = board.BLACK
+			} else {
+				color = board.WHITE
 			}
 
 			switch strings.ToLower(string(c)) {
@@ -165,7 +166,7 @@ func addPieces(newBoard *board.Board, piecesPart string) error{
 			case "p":
 				kind = board.PAWN
 			}
-			newBoard.SetPieceAt(board.Position{File: board.File(file), Rank: oneLessCurrentRank + 1}, board.NewPiece(kind, color))
+			newBoard.SetPieceAt(board.Position{File: board.File(file), Rank: rank}, board.NewPiece(kind, color))
 			file++
 		}
 	}

@@ -56,7 +56,7 @@ func InitBoard(stmnt *uci.PositionStatement) error {
 	return nil
 }
 
-func CalculatePossibleMoves() []board.Move {
+func CalculatePossibleMoves(filterMoves bool) []board.Move {
 	var moves []board.Move
 	posInMb64 := -1
 	for rank := 1; rank < 9; rank++ {
@@ -71,11 +71,74 @@ func CalculatePossibleMoves() []board.Move {
 				continue
 			}
 
-			moves = append(moves, calculateMovesForPieceAt(piece, posInMb64)...)
+			newMoves := calculateMovesForPieceAt(piece, posInMb64)
+
+			if filterMoves {
+				newMoves = filterMovesIntoChess(newMoves)
+			}
+
+			moves = append(moves, newMoves...)
 		}
 	}
 
 	return moves
+}
+
+func filterMovesIntoChess(moves []board.Move) []board.Move {
+	var validMoves []board.Move
+	posInMb64 := -1
+
+	for rank := 1; rank < 9; rank++ {
+		for _, file := range board.AllFiles {
+			posInMb64++
+			kingPosition := board.Position{file, rank}
+			piece := CurrentBoard.PieceAt(kingPosition)
+			if piece == nil {
+				continue
+			}
+			if piece.Color != CurrentBoard.Side {
+				continue
+			}
+			if piece.Kind != board.KING {
+				continue
+			}
+
+			friendSide := CurrentBoard.Side
+			enemySide := board.WHITE
+			if friendSide == board.WHITE {
+				enemySide = board.BLACK
+			}
+
+			// setup board for enemy moves
+			CurrentBoard.Side = enemySide
+
+			for _, move := range moves {
+				currentKingPosition := kingPosition
+				if CurrentBoard.PieceAt(move.From).Kind == board.KING {
+					currentKingPosition = move.To
+				}
+				foundKing := false
+				CurrentBoard.Move(move)
+
+				allPossibleEnemyMoves := CalculatePossibleMoves(false)
+				for _, enemyMove := range allPossibleEnemyMoves {
+					if enemyMove.To == currentKingPosition {
+						foundKing = true
+					}
+				}
+				if !foundKing {
+					validMoves = append(validMoves, move)
+				}
+
+				CurrentBoard.Move(move.Invert())
+			}
+
+			// reset board
+			CurrentBoard.Side = friendSide
+		}
+	}
+
+	return validMoves
 }
 
 func calculateMovesForPieceAt(piece *board.Piece, posInMb64 int) []board.Move {

@@ -14,6 +14,8 @@ const (
 	KING
 )
 
+var AllPieceKinds = []ChessPieceKind{PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING}
+
 const (
 	WHITE Color = 0
 	BLACK Color = 1

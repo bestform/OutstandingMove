@@ -117,6 +117,10 @@ func (m Move) String() string {
 	return out
 }
 
+func (m Move) Invert() Move {
+	return Move{m.To, m.From}
+}
+
 func MoveFromString(moveStr string) Move {
 	move := Move{}
 	fromString := string(moveStr[0]) + string(moveStr[1])
@@ -242,24 +246,44 @@ func (b *Board) String() string {
 	str := ""
 	for rank := 8; rank > 0; rank-- {
 		for file := 0; file < 8; file++ {
-			cell := b.PieceAt(Position{File: File(file), Rank: rank})
-			if cell == nil {
+			piece := b.PieceAt(Position{File: File(file), Rank: rank})
+			if piece == nil {
 				str += "."
 				continue
 			}
-			switch cell.Kind {
-			case PAWN:
-				str += "P"
-			case ROOK:
-				str += "R"
-			case BISHOP:
-				str += "B"
-			case QUEEN:
-				str += "Q"
-			case KING:
-				str += "K"
-			case KNIGHT:
-				str += "N"
+			switch piece.Color {
+			case WHITE:
+				switch piece.Kind {
+				case PAWN:
+					str += "P"
+				case ROOK:
+					str += "R"
+				case BISHOP:
+					str += "B"
+				case QUEEN:
+					str += "Q"
+				case KING:
+					str += "K"
+				case KNIGHT:
+					str += "N"
+				}
+
+			case BLACK:
+				switch piece.Kind {
+				case PAWN:
+					str += "p"
+				case ROOK:
+					str += "r"
+				case BISHOP:
+					str += "b"
+				case QUEEN:
+					str += "q"
+				case KING:
+					str += "k"
+				case KNIGHT:
+					str += "n"
+				}
+
 			}
 
 		}
