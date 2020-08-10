@@ -73,25 +73,22 @@ func CalculatePossibleMoves(filterMoves bool) []board.Move {
 
 			newMoves := calculateMovesForPieceAt(piece, posInMb64)
 
-			if filterMoves {
-				newMoves = filterMovesIntoChess(newMoves)
-			}
-
 			moves = append(moves, newMoves...)
 		}
+	}
+
+	if filterMoves {
+		moves = filterMovesIntoCheck(moves)
 	}
 
 	return moves
 }
 
-func filterMovesIntoChess(moves []board.Move) []board.Move {
-	var validMoves []board.Move
-	posInMb64 := -1
-
+func kingPositionOfCurrentPlayer() board.Position {
+	var kingPosition board.Position
 	for rank := 1; rank < 9; rank++ {
 		for _, file := range board.AllFiles {
-			posInMb64++
-			kingPosition := board.Position{file, rank}
+			kingPosition = board.Position{file, rank}
 			piece := CurrentBoard.PieceAt(kingPosition)
 			if piece == nil {
 				continue
@@ -102,41 +99,55 @@ func filterMovesIntoChess(moves []board.Move) []board.Move {
 			if piece.Kind != board.KING {
 				continue
 			}
-
-			friendSide := CurrentBoard.Side
-			enemySide := board.WHITE
-			if friendSide == board.WHITE {
-				enemySide = board.BLACK
-			}
-
-			// setup board for enemy moves
-			CurrentBoard.Side = enemySide
-
-			for _, move := range moves {
-				currentKingPosition := kingPosition
-				if CurrentBoard.PieceAt(move.From).Kind == board.KING {
-					currentKingPosition = move.To
-				}
-				foundKing := false
-				CurrentBoard.Move(move)
-
-				allPossibleEnemyMoves := CalculatePossibleMoves(false)
-				for _, enemyMove := range allPossibleEnemyMoves {
-					if enemyMove.To == currentKingPosition {
-						foundKing = true
-					}
-				}
-				if !foundKing {
-					validMoves = append(validMoves, move)
-				}
-
-				CurrentBoard.Move(move.Invert())
-			}
-
-			// reset board
-			CurrentBoard.Side = friendSide
+			return kingPosition
 		}
 	}
+
+	return kingPosition // todo: this should not be reached. Return err
+}
+
+func filterMovesIntoCheck(moves []board.Move) []board.Move {
+	var validMoves []board.Move
+	var eliminatedMoves []board.Move
+
+	kingPosition := kingPositionOfCurrentPlayer()
+
+	friendSide := CurrentBoard.Side
+	enemySide := board.WHITE
+	if friendSide == board.WHITE {
+		enemySide = board.BLACK
+	}
+
+	// setup board for enemy moves
+	CurrentBoard.Side = enemySide
+
+	for _, move := range moves {
+		currentKingPosition := kingPosition
+		if CurrentBoard.PieceAt(move.From).Kind == board.KING {
+			currentKingPosition = move.To
+		}
+		foundKing := false
+		originalPieceAtTarget := CurrentBoard.PieceAt(move.To)
+		CurrentBoard.Move(move)
+
+		allPossibleEnemyMoves := CalculatePossibleMoves(false)
+		for _, enemyMove := range allPossibleEnemyMoves {
+			if enemyMove.To == currentKingPosition {
+				foundKing = true
+			}
+		}
+		if !foundKing {
+			validMoves = append(validMoves, move)
+		} else {
+			eliminatedMoves = append(eliminatedMoves, move)
+		}
+
+		CurrentBoard.Move(move.Invert())
+		CurrentBoard.SetPieceAt(move.To, originalPieceAtTarget)
+	}
+
+	// reset board
+	CurrentBoard.Side = friendSide
 
 	return validMoves
 }
@@ -152,7 +163,7 @@ func calculateMovesForPieceAt(piece *board.Piece, posInMb64 int) []board.Move {
 	for j := 0; j < piece.Directions; j++ {
 		n := posInMb64
 		for {
-			n = mb120[mb64[n] + piece.Offsets[j]]
+			n = mb120[mb64[n]+piece.Offsets[j]]
 			if n == -1 {
 				break
 			}
@@ -203,7 +214,7 @@ func movesForPawn(piece *board.Piece, posInMb64 int) []board.Move {
 
 	// moves
 	for _, offset := range moveOffsets {
-		newPosInt := mb120[mb64[posInMb64] + offset]
+		newPosInt := mb120[mb64[posInMb64]+offset]
 		if newPosInt == -1 {
 			continue // todo: Handle promotion
 		}
@@ -220,7 +231,7 @@ func movesForPawn(piece *board.Piece, posInMb64 int) []board.Move {
 
 	// strikes
 	for _, offset := range strikeOffsets {
-		newPosInt := mb120[mb64[posInMb64] + offset]
+		newPosInt := mb120[mb64[posInMb64]+offset]
 		if newPosInt == -1 {
 			continue
 		}
